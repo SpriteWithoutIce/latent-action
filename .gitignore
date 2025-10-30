@@ -1,0 +1,8 @@
+runs/
+swanlog/
+rollouts/
+eval_logs/
+__pycache__/
+logs/
+*.ckpt
+*.pth
