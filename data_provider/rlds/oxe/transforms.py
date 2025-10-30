@@ -1014,6 +1014,7 @@ OXE_STANDARDIZATION_TRANSFORMS = {
     "droid_wipe": droid_finetuning_transform,
     ### LIBERO datasets (modified versions)
     "libero_spatial": libero_dataset_transform,
+    "libero_spatial_no_noops": libero_dataset_transform,
     "libero_object": libero_dataset_transform,
     "libero_goal": libero_dataset_transform,
     "libero_10": libero_dataset_transform,
