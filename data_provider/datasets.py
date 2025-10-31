@@ -10,7 +10,7 @@ random access image reading is relatively cheap/fast.
 """
 
 from pathlib import Path
-from typing import Dict, Tuple, Any, Iterator
+from typing import Any, Dict, Iterator, Optional, Tuple
 
 from torch.utils.data import IterableDataset
 
@@ -27,16 +27,27 @@ class RLDSDataset(IterableDataset):
         self,
         data_root_dir: Path,
         data_mix: str,
-        batch_transform: RLDSBatchTransform,
+        batch_transform: Optional[RLDSBatchTransform],
         resize_resolution: Tuple[int, int],
         shuffle_buffer_size: int = 256_000,
         train: bool = True,
         image_aug: bool = False,
         window_size: int = 8,
         goal_image_step: int = 8,
+        return_raw_data: bool = False,
     ) -> None:
         """Lightweight wrapper around RLDS TFDS Pipeline for use with PyTorch/OpenVLA Data Loaders."""
-        self.data_root_dir, self.data_mix, self.batch_transform = data_root_dir, data_mix, batch_transform
+        self.data_root_dir, self.data_mix, self.batch_transform = (
+            data_root_dir,
+            data_mix,
+            batch_transform,
+        )
+        self.return_raw_data = return_raw_data
+
+        if self.return_raw_data and self.batch_transform is not None:
+            raise ValueError(
+                "`return_raw_data=True` is incompatible with providing a batch transform."
+            )
 
         # Configure RLDS Dataset(s)
         if self.data_mix in OXE_NAMED_MIXTURES:
@@ -102,7 +113,10 @@ class RLDSDataset(IterableDataset):
 
     def __iter__(self) -> Iterator[Dict[str, Any]]:
         for rlds_batch in self.dataset.as_numpy_iterator():
-            yield self.batch_transform(rlds_batch)
+            if self.return_raw_data or self.batch_transform is None:
+                yield rlds_batch
+            else:
+                yield self.batch_transform(rlds_batch)
 
     def __len__(self) -> int:
         return self.dataset_length
