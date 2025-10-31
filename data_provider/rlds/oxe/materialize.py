@@ -9,10 +9,10 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from latentvla.overwatch import initialize_overwatch
-from latentvla.data_provider.rlds.oxe.configs import OXE_DATASET_CONFIGS, ActionEncoding
-from latentvla.data_provider.rlds.oxe.transforms import OXE_STANDARDIZATION_TRANSFORMS
-from latentvla.data_provider.rlds.utils.data_utils import NormalizationType
+from overwatch import initialize_overwatch
+from data_provider.rlds.oxe.configs import OXE_DATASET_CONFIGS, ActionEncoding
+from data_provider.rlds.oxe.transforms import OXE_STANDARDIZATION_TRANSFORMS
+from data_provider.rlds.utils.data_utils import NormalizationType
 
 # Initialize Overwatch =>> Wraps `logging.Logger`
 overwatch = initialize_overwatch(__name__)

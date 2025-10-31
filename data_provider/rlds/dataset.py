@@ -21,10 +21,9 @@ from huggingface_hub import hf_hub_download
 from tqdm import tqdm
 import time
 
-from latentvla.overwatch import initialize_overwatch
-from latentvla.data_provider.rlds import obs_transforms, traj_transforms
-from latentvla.data_provider.rlds.utils import goal_relabeling, task_augmentation
-from latentvla.data_provider.rlds.utils.data_utils import (
+from data_provider.rlds import obs_transforms, traj_transforms
+from data_provider.rlds.utils import goal_relabeling, task_augmentation
+from data_provider.rlds.utils.data_utils import (
     NormalizationType,
     allocate_threads,
     get_dataset_statistics,
@@ -33,10 +32,6 @@ from latentvla.data_provider.rlds.utils.data_utils import (
     tree_map,
 )
 import random
-
-# Initialize Overwatch =>> Wraps `logging.Logger`
-overwatch = initialize_overwatch(__name__)
-
 
 # Configure Tensorflow with *no GPU devices* (to prevent clobber with PyTorch)
 tf.config.set_visible_devices([], "GPU")
@@ -240,7 +235,7 @@ def make_dataset_from_rlds(
         return traj
     builder = tfds.builder_from_directory(
         data_dir,
-        file_format="tfrecord"
+        # file_format="tfrecord"
     )
     dataset = builder.as_dataset(split='train')
     # load or compute dataset statistics
@@ -571,11 +566,6 @@ def make_interleaved_dataset(
     threads_per_dataset = allocate_threads(traj_transform_threads, sample_weights)
     reads_per_dataset = allocate_threads(traj_read_threads, sample_weights)
 
-    overwatch.info("Threads per Dataset: %s", threads_per_dataset)
-    overwatch.info("Reads per Dataset: %s", reads_per_dataset)
-
-    # Construct Datasets
-    overwatch.info("Constructing datasets...")
     datasets = []
     for dataset_kwargs, threads, reads in zip(
         dataset_kwargs_list,
@@ -616,7 +606,6 @@ def make_interleaved_dataset(
     dataset = dataset.shuffle(shuffle_buffer_size)
 
     # Apply Frame Transforms
-    overwatch.info("Applying frame transforms on dataset...")
     dataset = apply_frame_transforms(dataset, **frame_transform_kwargs, train=train)
 
     # [Contract] When training VLA Policies, we let the Collator handle Batching!

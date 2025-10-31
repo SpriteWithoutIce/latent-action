@@ -14,10 +14,10 @@ from typing import Any, Dict, Iterator, Optional, Tuple
 
 from torch.utils.data import IterableDataset
 
-from latentvla.data_provider.data_utils import RLDSBatchTransform
-from latentvla.data_provider.rlds import make_interleaved_dataset
-from latentvla.data_provider.rlds.oxe import OXE_NAMED_MIXTURES, get_oxe_dataset_kwargs_and_weights
-from latentvla.data_provider.rlds.utils.data_utils import NormalizationType
+from data_provider.data_utils import RLDSBatchTransformInternVL
+from data_provider.rlds import make_interleaved_dataset
+from data_provider.rlds.oxe import OXE_NAMED_MIXTURES, get_oxe_dataset_kwargs_and_weights
+from data_provider.rlds.utils.data_utils import NormalizationType
 
 # HuggingFace Default / LLaMa-2 IGNORE_INDEX (for labels)
 IGNORE_INDEX = -100
@@ -27,7 +27,7 @@ class RLDSDataset(IterableDataset):
         self,
         data_root_dir: Path,
         data_mix: str,
-        batch_transform: Optional[RLDSBatchTransform],
+        batch_transform: Optional[RLDSBatchTransformInternVL],
         resize_resolution: Tuple[int, int],
         shuffle_buffer_size: int = 256_000,
         train: bool = True,

@@ -21,14 +21,9 @@ from PIL import Image
 from transformers.models.qwen2.tokenization_qwen2_fast import Qwen2TokenizerFast
 import torchvision.transforms.functional as F
 from torchvision import transforms
-from qwen_vl_utils import process_vision_info
-
-# HuggingFace Default / LLaMa-2 IGNORE_INDEX (for labels)
-from latentvla.models.constants import(
-    NUM_TOKENS,
-    IGNORE_INDEX,
-    PROPRIO_DIM
-)
+NUM_TOKENS = 64
+IGNORE_INDEX = -100
+PROPRIO_DIM = 8
 
 
 def tree_map(fn: Callable, tree: dict) -> dict:
@@ -191,160 +186,11 @@ def load_image(image, input_size=448, max_num=12):
     pixel_values = torch.stack(pixel_values)
     return pixel_values
 
-@dataclass
-class RLDSBatchTransform:
-    def __init__(self, processor, latent, latent_model):
-        self.processor = processor
-        self.latent = latent
-        self.latent_model = latent_model
-
-    def __call__(self, rlds_batch: Dict[str, Any]) -> Dict[str, Any]:
-        dataset_name = rlds_batch["dataset_name"]
-
-
-        img = Image.fromarray(rlds_batch["observation"]["image_primary"][0])
-        img_k = Image.fromarray(rlds_batch["observation"]["image_primary"][-1])
-        lang = rlds_batch["task"]["language_instruction"].decode().lower()
-        if self.latent:
-            transform = transforms.Compose([
-                transforms.Resize((256, 256)),
-                transforms.ToTensor()
-            ])
-            img_tensor = transform(img).unsqueeze(0).cuda()
-            img_k_tensor = transform(img_k).unsqueeze(0).cuda()
-            video = torch.stack([img_tensor, img_k_tensor], dim=2)  # (B, C, T, H, W)
-            with torch.no_grad():
-                latent_actions = self.latent_model.inference(
-                    video,
-                    return_only_codebook_ids=True
-                )
-                 
-        img = img.resize((56, 56))
-        H, W = img.size[1], img.size[0]
-        patch_size = 14
-        image_grid_thw = [(1, H // patch_size, W // patch_size)]
-
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "image", "image": img},
-                    {"type": "text", "text": f"What action should the robot take to {lang}?"},
-                ],
-            }
-        ]
-
-        text = self.processor.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=False
-        )
-        image_inputs, video_inputs = process_vision_info(messages)
-
-        inputs = self.processor(
-            text=[text],
-            images=image_inputs,
-            videos=video_inputs,
-            padding=True,
-            return_tensors="pt",
-        )
-
-        action = torch.tensor(rlds_batch["action"][0], dtype=torch.bfloat16)
-
-        return dict(
-            input_ids=inputs["input_ids"][0],
-            attention_mask=inputs["attention_mask"][0],
-            pixel_values=inputs.get("pixel_values", None) if "pixel_values" in inputs else None,
-            labels=action,
-            dataset_name=dataset_name,
-            image_grid_thw=image_grid_thw,
-            latent_actions=latent_actions if self.latent else None,
-        )
-    
-@dataclass
-class RLDSBatchTransformLatentAction:
-    def __init__(self, processor, latent_model, window_size=12):
-        self.processor = processor
-        self.latent_model = latent_model
-        self.window_size = window_size
-
-    def __call__(self, rlds_batch: Dict[str, Any]) -> Dict[str, Any]:
-        dataset_name = rlds_batch["dataset_name"]
-
-        img = Image.fromarray(rlds_batch["observation"]["image_primary"][-1])
-        img_k = Image.fromarray(rlds_batch["goal_image"]["image_primary"])
-        lang = rlds_batch["task"]["language_instruction"].decode().lower()
-        transform = transforms.Compose([
-            transforms.Resize((256, 256)),
-            transforms.ToTensor()
-        ])
-        
-        with torch.no_grad():
-            initial_pixel_values = transform(img).unsqueeze(0).cuda()
-            target_pixel_values = transform(img_k).unsqueeze(0).cuda()
-            video = torch.stack([initial_pixel_values, target_pixel_values], dim=2)  # (B, C, T, H, W)
-            latent_actions = self.latent_model.inference(
-                video,
-                return_only_codebook_ids=True
-            )
-        action_vocab = [f'<ACT_{i.item()}>' for i in latent_actions.squeeze(0)]
-        action_tokens = ''
-        for i, action in enumerate(action_vocab):
-            action_tokens += action
-            
-        img = [Image.fromarray(rlds_batch["observation"]["image_primary"][-1])]
-        img = [i.resize((224, 224)) for i in img]
-        W, H = img[0].size
-        patch_size = 14
-        image_grid_thw = [(len(img), H // patch_size, W // patch_size)]
-
-        image_contents = [{"type": "image", "image": i} for i in img]
-        messages = [
-            {
-                "role": "user",
-                "content":  image_contents+[
-                    {"type": "text", "text": f"What action should the robot take to {lang}?"},
-                ],
-            },
-            # {
-            #     "role": "assistant",
-            #     "content": [
-            #         {"type": "text", "text": action_tokens},
-            #     ],
-            # },
-        ]
-
-        text = self.processor.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=False
-        )
-        image_inputs, video_inputs = process_vision_info(messages)
-
-        inputs = self.processor(
-            text=[text],
-            images=image_inputs,
-            videos=video_inputs,
-            padding=True,
-            return_tensors="pt",
-        )
-
-        action = torch.tensor(rlds_batch["action"][-self.window_size:], dtype=torch.bfloat16)
-        labels = inputs["input_ids"][0].clone()
-        labels[: -(len(action_vocab) + 1)] = IGNORE_INDEX
-        # print(inputs["input_ids"].shape, inputs["attention_mask"].shape, inputs.get("pixel_values", None).shape)
-        return dict(
-            input_ids=inputs["input_ids"][0],
-            attention_mask=inputs["attention_mask"][0],
-            pixel_values=inputs.get("pixel_values", None) if "pixel_values" in inputs else None,
-            actions=action,
-            labels=labels,
-            dataset_name=dataset_name,
-            image_grid_thw=image_grid_thw,
-            latent_actions=latent_actions,
-        )
-
 num_image_token = 256
 
 IMG_START_TOKEN, IMG_END_TOKEN, IMG_CONTEXT_TOKEN = "<img>", "</img>", "<IMG_CONTEXT>"
-from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor, AutoModel, AutoTokenizer
-from latentvla.models.action_tokenizer import ActionTokenizer
+from transformers import AutoTokenizer
+from data_provider.action_tokenizer import ActionTokenizer
 
 @dataclass
 class RLDSBatchTransformInternVL:

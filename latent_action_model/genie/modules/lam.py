@@ -190,7 +190,7 @@ class ControllableDINOLatentActionModel(nn.Module):
 
         self.dino_transform = transforms.Normalize(mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD)
         # self.dino_encoder = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitb14_reg')
-        checkpoint_path="/home/linyihan/linyh/LatentVLA-prismatic/latent_action_model/genie/modules/dinov2_vitb14_reg4_pretrain.pth"
+        checkpoint_path="/home/linyihan/linyh/latent-action/latent_action_model/genie/modules/dinov2_vitb14_reg4_pretrain.pth"
         model=dinov2_vitb14_reg(pretrained=False)
         state_dict = torch.load(checkpoint_path, map_location='cpu')
         clean_state_dict = {k.replace('module.',''): v for k, v in state_dict.items()}
