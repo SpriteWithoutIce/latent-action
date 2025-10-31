@@ -57,6 +57,7 @@ class FinetuneConfig:
     data_root_dir: str = "datasets/open-x-embodiment"
     data_mix: str = "libero_goal"
     window_size: int = 8
+    goal_image_step: int = 32
 
     # training
     max_steps: int = 10
@@ -75,6 +76,7 @@ def finetune(cfg: FinetuneConfig) -> None:
     batch_transform = RLDSBatchTransformInternVL(
         action_tokenizer,
         tokenizer,
+        latent_action_model,
         use_wrist_image=True,
         use_proprio=True,
     )
@@ -105,12 +107,12 @@ def finetune(cfg: FinetuneConfig) -> None:
         num_workers=0,
         worker_init_fn=worker_init_fn,
     )
-    total_steps = cfg.max_steps
+    total_steps = len(vla_dataset) // cfg.per_device_batch_size
     # Train!
     with tqdm.tqdm(total=total_steps, leave=False) as progress:
         for batch_idx, batch in enumerate(dataloader):
             batch = batch
-            print(batch["input_ids"].shape)
+            print(batch["latent_action_idx"])
 
 
 if __name__ == "__main__":

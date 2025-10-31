@@ -40,7 +40,7 @@ class PaddedCollatorForActionPrediction:
     def __call__(self, instances: Sequence[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
         input_ids, labels = tuple([instance[key] for instance in instances] for key in ("input_ids", "labels"))
         pixel_values = [instance["pixel_values"] for instance in instances]
-        
+        latent_action_idx = [instance["latent_action_idx"] for instance in instances]
         dataset_names = [inst["dataset_name"] for inst in instances] if "dataset_name" in instances[0] else None
 
         assert self.padding_side == "right", f"Invalid Tokenizer `{self.padding_side = }`"
@@ -78,6 +78,7 @@ class PaddedCollatorForActionPrediction:
             attention_mask=attention_mask,
             actions=actions,
             labels=labels,
+            latent_action_idx=latent_action_idx
         )
         if dataset_names is not None:
             output["dataset_names"] = dataset_names
@@ -191,11 +192,12 @@ num_image_token = 256
 IMG_START_TOKEN, IMG_END_TOKEN, IMG_CONTEXT_TOKEN = "<img>", "</img>", "<IMG_CONTEXT>"
 from transformers import AutoTokenizer
 from data_provider.action_tokenizer import ActionTokenizer
-
+from latent_action_model.genie.model import ControllableDINOLatentActionModel
 @dataclass
 class RLDSBatchTransformInternVL:
     action_tokenizer: ActionTokenizer
     tokenizer: AutoTokenizer
+    latent_action_tokenizer: ControllableDINOLatentActionModel
     use_wrist_image: bool = False
     use_proprio: bool = False
 
@@ -203,6 +205,16 @@ class RLDSBatchTransformInternVL:
         dataset_name, actions = rlds_batch["dataset_name"], rlds_batch["action"]
 
         img = Image.fromarray(rlds_batch["observation"]["image_primary"][0])
+        img_k = Image.fromarray(rlds_batch["goal_image"]["image_primary"])
+
+        # Get latent action tokens
+        with torch.no_grad():
+            initial_pixel_values = transforms.ToTensor()(img)
+            target_pixel_values= transforms.ToTensor()(img_k)
+
+            video = torch.stack([initial_pixel_values, target_pixel_values], dim=0).unsqueeze(0).to(self.latent_action_tokenizer.device)
+            latent_action_idx = self.latent_action_tokenizer.vq_encode(video)['indices'].squeeze()
+
         lang = rlds_batch["task"]["language_instruction"].decode().lower()
         pixel_values = load_image(img).to(torch.bfloat16).cuda()
         
@@ -238,6 +250,7 @@ class RLDSBatchTransformInternVL:
             actions=actions,
             labels=labels,
             dataset_name=dataset_name,
+            latent_action_idx=latent_action_idx
         )
         # Add additional inputs
         if self.use_wrist_image:
