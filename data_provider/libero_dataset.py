@@ -100,6 +100,7 @@ def create_libero_spatial_no_noops_dataset(
     use_wrist_image: bool = True,
     use_proprio: bool = True,
     goal_image_step: Optional[int] = None,
+    return_raw_data: bool = False,
 ) -> Tuple[RLDSDataset, PaddedCollatorForActionPrediction]:
     """Instantiate the RLDS pipeline for the LIBERO spatial training set.
 
@@ -117,22 +118,28 @@ def create_libero_spatial_no_noops_dataset(
         use_proprio: Include proprioceptive state in the batch transform.
         goal_image_step: Step offset for sampling goal images. Defaults to the
             provided ``window_size`` when ``None``.
+        return_raw_data: When ``True`` the underlying RLDS examples are returned
+            directly without applying ``RLDSBatchTransformInternVL`` and the
+            collator return value is ``None``.
 
     Returns:
         Tuple of ``(dataset, collator)`` ready to be consumed by a PyTorch
-        ``DataLoader``.
+        ``DataLoader``. When ``return_raw_data=True`` the collator element will
+        be ``None``.
     """
 
     resolved_root = _resolve_libero_builder_dir(
         Path(data_root_dir) if data_root_dir is not None else DEFAULT_LIBERO_DATA_ROOT
     )
 
-    batch_transform = RLDSBatchTransformInternVL(
-        action_tokenizer,
-        tokenizer,
-        use_wrist_image=use_wrist_image,
-        use_proprio=use_proprio,
-    )
+    batch_transform = None
+    if not return_raw_data:
+        batch_transform = RLDSBatchTransformInternVL(
+            action_tokenizer,
+            tokenizer,
+            use_wrist_image=use_wrist_image,
+            use_proprio=use_proprio,
+        )
 
     dataset = RLDSDataset(
         resolved_root,
@@ -144,13 +151,16 @@ def create_libero_spatial_no_noops_dataset(
         image_aug=image_aug,
         window_size=window_size,
         goal_image_step=goal_image_step if goal_image_step is not None else window_size,
+        return_raw_data=return_raw_data,
     )
 
-    collator = PaddedCollatorForActionPrediction(
-        tokenizer.model_max_length,
-        tokenizer.pad_token_id,
-        padding_side="right",
-    )
+    collator = None
+    if not return_raw_data:
+        collator = PaddedCollatorForActionPrediction(
+            tokenizer.model_max_length,
+            tokenizer.pad_token_id,
+            padding_side="right",
+        )
 
     return dataset, collator
 
