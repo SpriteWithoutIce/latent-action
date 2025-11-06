@@ -40,7 +40,9 @@ class PaddedCollatorForActionPrediction:
     def __call__(self, instances: Sequence[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
         input_ids, labels = tuple([instance[key] for instance in instances] for key in ("input_ids", "labels"))
         pixel_values = [instance["pixel_values"] for instance in instances]
-        latent_action_idx = [instance["latent_action_idx"] for instance in instances]
+        latent_action_idx = [torch.as_tensor(instance["latent_action_idx"]) for instance in instances]
+        latent_action_idx = torch.stack(latent_action_idx, dim=0)
+        
         dataset_names = [inst["dataset_name"] for inst in instances] if "dataset_name" in instances[0] else None
 
         assert self.padding_side == "right", f"Invalid Tokenizer `{self.padding_side = }`"

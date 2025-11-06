@@ -82,7 +82,7 @@ def make_oxe_dataset_kwargs(
     if "aux_kwargs" in dataset_kwargs:
         dataset_kwargs.update(dataset_kwargs.pop("aux_kwargs"))
 
-    return {"name": dataset_name, "data_dir": str(data_root_dir), **dataset_kwargs}
+    return {"name": dataset_name, "data_dir": str(Path(data_root_dir) / dataset_name / "1.0.0"), **dataset_kwargs}
 
 
 def get_oxe_dataset_kwargs_and_weights(
@@ -109,6 +109,7 @@ def get_oxe_dataset_kwargs_and_weights(
     return: Tuple of (per_dataset_kwargs, sampling_weights)
     """
     included_datasets, filtered_mixture_spec = set(), []
+    print(mixture_spec)
     for d_name, d_weight in mixture_spec:
         if d_name in included_datasets:
             overwatch.warning(f"Skipping Duplicate Dataset: `{(d_name, d_weight)}`")

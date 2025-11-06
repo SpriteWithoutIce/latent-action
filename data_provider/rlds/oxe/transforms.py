@@ -1016,8 +1016,11 @@ OXE_STANDARDIZATION_TRANSFORMS = {
     "libero_spatial": libero_dataset_transform,
     "libero_spatial_no_noops": libero_dataset_transform,
     "libero_object": libero_dataset_transform,
+    "libero_object_no_noops": libero_dataset_transform,
     "libero_goal": libero_dataset_transform,
+    "libero_goal_no_noops": libero_dataset_transform,
     "libero_10": libero_dataset_transform,
+    "libero_10_no_noops": libero_dataset_transform,
     "libero_90": libero_dataset_transform,
     # deformable datasets
     "fold": deformable_dataset_transform,

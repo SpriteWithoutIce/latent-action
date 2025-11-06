@@ -9,14 +9,14 @@ import json
 import math
 import os
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import DefaultDict, Dict, List, Optional, Sequence, Tuple
 
 import draccus
 import torch
 import tqdm
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, ConcatDataset
 from transformers import AutoTokenizer
 
 from torchvision.utils import make_grid
@@ -35,6 +35,12 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 IMAGENET_MEAN = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
 IMAGENET_STD = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
 
+DATA_ROOT_MAP = {
+    "libero_spatial": "/home/linyihan/linyh/datasets/modified_libero_rlds/libero_spatial_no_noops/1.0.0",
+    "libero_object": "/home/linyihan/linyh/datasets/modified_libero_rlds/libero_object_no_noops/1.0.0",
+    "libero_goal": "/home/linyihan/linyh/datasets/modified_libero_rlds/libero_goal_no_noops/1.0.0",
+    "libero_10": "/home/linyihan/linyh/datasets/modified_libero_rlds/libero_10_no_noops/1.0.0",
+}
 
 def denormalize_image(image: torch.Tensor) -> torch.Tensor:
     """Inverse ImageNet normalization for a single image tensor."""
@@ -129,7 +135,8 @@ class LatentActionGalleryCollector:
         for latent_key, images in sorted(self.images_by_latent.items()):
             if not images:
                 continue
-
+            if len(images) < 10:
+                continue
             grid = make_grid(
                 torch.stack(images, dim=0),
                 nrow=self._grid_nrow(len(images)),
@@ -195,7 +202,7 @@ class FinetuneConfig:
 
     # data
     data_root_dir: str = "datasets/open-x-embodiment"
-    data_mix: str = "libero_goal"
+    data_mix: List[str] = field(default_factory=list)
     window_size: int = 8
     goal_image_step: int = 32
 
@@ -203,7 +210,7 @@ class FinetuneConfig:
     max_steps: int = 10
     per_device_batch_size: int = 4
     # visualization
-    visualize_latent_actions: bool = False
+    visualize_latent_actions: bool = True
     latent_action_output_dir: str = "latent_action_visualizations"
     max_images_per_latent: int = 16
     visualization_patch_index: int = 0
@@ -228,6 +235,33 @@ def finetune(cfg: FinetuneConfig) -> None:
         use_proprio=True,
     )
     
+
+    datasets = []
+
+    # # 支持传入字符串或列表
+    # if isinstance(cfg.data_mix, str):
+    #     dataset_names = [cfg.data_mix]
+    # else:
+    #     dataset_names = cfg.data_mix
+
+    # for mix_name in dataset_names:
+    #     print(f"Loading dataset: {mix_name}")
+    #     ds = RLDSDataset(
+    #         Path(DATA_ROOT_MAP[mix_name]),
+    #         mix_name,
+    #         batch_transform,
+    #         resize_resolution=(224, 224),
+    #         shuffle_buffer_size=100_000,
+    #         train=True,
+    #         image_aug=True,
+    #         window_size=cfg.window_size,
+    #         goal_image_step=cfg.window_size,
+    #     )
+    #     datasets.append(ds)
+
+    # # ✅ 合并所有子数据集
+    # vla_dataset = ConcatDataset(datasets)
+    # print(f"Total combined dataset length = {len(vla_dataset)}")
     vla_dataset = RLDSDataset(
         Path(cfg.data_root_dir),
         cfg.data_mix,
@@ -239,13 +273,13 @@ def finetune(cfg: FinetuneConfig) -> None:
         window_size=cfg.window_size,
         goal_image_step=cfg.window_size,
     )
+    print(f"Total combined dataset length = {len(vla_dataset)}")
     # Create Collator
     collator = PaddedCollatorForActionPrediction(
         tokenizer.model_max_length, 
         tokenizer.pad_token_id, 
         padding_side="right"
     )
-    print('Dataset length = ', len(vla_dataset))
     dataloader = DataLoader(
         vla_dataset,
         batch_size=cfg.per_device_batch_size,
@@ -255,7 +289,7 @@ def finetune(cfg: FinetuneConfig) -> None:
         worker_init_fn=worker_init_fn,
     )
     total_steps = len(vla_dataset) // cfg.per_device_batch_size
-
+    print("total_steps: ", total_steps)
     if cfg.visualize_latent_actions:
         collector = LatentActionGalleryCollector(
             output_dir=Path(cfg.latent_action_output_dir),
@@ -267,7 +301,7 @@ def finetune(cfg: FinetuneConfig) -> None:
         progress_total = (
             cfg.visualization_max_batches
             if cfg.visualization_max_batches is not None
-            else len(dataloader)
+            else total_steps
         )
 
         with tqdm.tqdm(total=progress_total, leave=False) as progress:

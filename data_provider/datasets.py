@@ -10,7 +10,7 @@ random access image reading is relatively cheap/fast.
 """
 
 from pathlib import Path
-from typing import Any, Dict, Iterator, Optional, Tuple
+from typing import Any, Dict, Iterator, Optional, Tuple, List
 
 from torch.utils.data import IterableDataset
 
@@ -26,7 +26,7 @@ class RLDSDataset(IterableDataset):
     def __init__(
         self,
         data_root_dir: Path,
-        data_mix: str,
+        data_mix: List[str],
         batch_transform: Optional[RLDSBatchTransformInternVL],
         resize_resolution: Tuple[int, int],
         shuffle_buffer_size: int = 256_000,
@@ -50,11 +50,15 @@ class RLDSDataset(IterableDataset):
             )
 
         # Configure RLDS Dataset(s)
-        if self.data_mix in OXE_NAMED_MIXTURES:
-            mixture_spec = OXE_NAMED_MIXTURES[self.data_mix]
-        else:
-            # Assume that passed "mixture" name is actually a single dataset -- create single-dataset "mix"
-            mixture_spec = [(self.data_mix, 1.0)]
+        mixture_spec = []
+        for mix_name in self.data_mix:
+            if mix_name in OXE_NAMED_MIXTURES:
+                # mixture_spec = OXE_NAMED_MIXTURES[mix_name]
+                mixture_spec.extend(OXE_NAMED_MIXTURES[mix_name])
+            else:
+                # Assume that passed "mixture" name is actually a single dataset -- create single-dataset "mix"
+                # mixture_spec = [(mix_name, 1.0)]
+                mixture_spec.append((mix_name, 1.0))
 
         # fmt: off
         per_dataset_kwargs, weights = get_oxe_dataset_kwargs_and_weights(
