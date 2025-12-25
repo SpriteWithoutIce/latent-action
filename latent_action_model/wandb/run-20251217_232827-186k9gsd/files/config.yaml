@@ -1,0 +1,57 @@
+_wandb:
+    value:
+        cli_version: 0.22.2
+        e:
+            9dma6djjyu2pyfr2r2wyinj5fnfb34o8:
+                args:
+                    - fit
+                    - --config
+                    - config/lam-stage-2.yaml
+                codePath: latent_action_model/main.py
+                codePathLocal: main.py
+                email: 22373442@buaa.edu.cn
+                executable: /home/linyihan/miniconda3/envs/vlaos/bin/python3.10
+                git:
+                    commit: 2b8228146d737df9f55a0319526eebb21cbc5bd1
+                    remote: git@github.com:SpriteWithoutIce/latent-action.git
+                host: zkgy-gpu
+                os: Linux-5.15.0-124-generic-x86_64-with-glibc2.31
+                program: /home/linyihan/linyh/latent-action/latent_action_model/main.py
+                python: CPython 3.10.19
+                root: /home/linyihan/linyh/latent-action/latent_action_model
+                startedAt: "2025-12-17T15:28:27.437478Z"
+                writerId: 9dma6djjyu2pyfr2r2wyinj5fnfb34o8
+        m: []
+        python_version: 3.10.19
+        t:
+            "1":
+                - 1
+                - 2
+                - 3
+                - 5
+                - 11
+                - 41
+                - 49
+                - 53
+                - 71
+                - 106
+            "2":
+                - 1
+                - 2
+                - 3
+                - 5
+                - 11
+                - 41
+                - 49
+                - 53
+                - 71
+                - 106
+            "3":
+                - 13
+            "4": 3.10.19
+            "5": 0.22.2
+            "6": 4.57.1
+            "10":
+                - 20
+            "12": 0.22.2
+            "13": linux-x86_64

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import piq
 import torch
-import wandb
+import swanlab
 from PIL import Image
 from einops import rearrange
 from lightning import LightningModule
@@ -15,7 +15,7 @@ from accelerate import PartialState
 
 OptimizerCallable = Callable[[Iterable], Optimizer]
 
-from latent_action_model.genie.modules import UncontrolledDINOLatentActionModel, ControllableDINOLatentActionModel
+from genie.modules import UncontrolledDINOLatentActionModel, ControllableDINOLatentActionModel
 import logging
 logging.basicConfig(format='%(message)s', level=logging.INFO)
 
@@ -46,6 +46,7 @@ class DINO_LAM(LightningModule):
             optimizer: OptimizerCallable = AdamW,
             make_data_pair: bool = False,
             stage_one_ckpt: str = None,
+            lam_path: str = None,
     ) -> None:
         super(DINO_LAM, self).__init__()
         assert stage in ['stage-1', 'stage-2']
@@ -64,14 +65,21 @@ class DINO_LAM(LightningModule):
                     dropout=lam_dropout,
                 )
         
-        if stage_one_ckpt and path.exists(stage_one_ckpt):
-            lam_ckpt = torch.load(stage_one_ckpt)['state_dict']
-            stage1_ckpt = {}
-            for key in lam_ckpt.keys():
-                if 'vq' in key or 'action_latent' in key:
-                    stage1_ckpt[key.replace("lam.", "")] = lam_ckpt[key]
-            self.lam.load_state_dict(stage1_ckpt, strict=False)
-
+        # if stage_one_ckpt and path.exists(stage_one_ckpt):
+        #     lam_ckpt = torch.load(stage_one_ckpt)['state_dict']
+        #     stage1_ckpt = {}
+        #     for key in lam_ckpt.keys():
+        #         if 'vq' in key or 'action_latent' in key:
+        #             stage1_ckpt[key.replace("lam.", "")] = lam_ckpt[key]
+        #     self.lam.load_state_dict(stage1_ckpt, strict=False)
+        checkpoint = torch.load(lam_path, map_location="cpu")["state_dict"]
+        remapped_state = {key.replace("lam.", ""): value for key, value in checkpoint.items()}
+        # self.lam.load_state_dict(remapped_state, strict=True)
+        missing_keys, unexpected_keys = self.lam.load_state_dict(
+            remapped_state,
+            strict=False
+        )
+        print(missing_keys, unexpected_keys)
 
         self.lam_num_latents = lam_num_latents
         self.vq_beta = vq_beta
@@ -85,7 +93,7 @@ class DINO_LAM(LightningModule):
         self.task_name = task_name
         self.distributed_state = PartialState()
         if self.distributed_state.is_main_process:
-            wandb.init(name=task_name, reinit=True)
+            swanlab.init(name=task_name, reinit=True)
 
     def shared_step(self, batch: Dict) -> Tuple:
         # batch: keys['videos', 'task_instruction', 'action', 'dataset_names']
@@ -155,7 +163,7 @@ class DINO_LAM(LightningModule):
         )
 
         if self.distributed_state.is_main_process:
-            wandb.log({**{"train_loss": loss}, **{f"train/{k}": v for k, v in aux_losses}})
+            swanlab.log({**{"train_loss": loss}, **{f"train/{k}": v for k, v in aux_losses}})
 
         return loss
 

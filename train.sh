@@ -1,0 +1,1 @@
+python train_libero_stage2.py

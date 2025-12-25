@@ -33,11 +33,9 @@ feature_description = {
     "steps/discount": tf.io.VarLenFeature(tf.float32),
     "steps/reward": tf.io.VarLenFeature(tf.float32),
     "steps/observation/state": tf.io.VarLenFeature(tf.float32),
-    "steps/observation/image": tf.io.VarLenFeature(tf.string),
-    "steps/observation/left_wrist_image": tf.io.VarLenFeature(tf.string),
-    "steps/observation/right_wrist_image": tf.io.VarLenFeature(tf.string),
+    # "steps/observation/joint_state": tf.io.VarLenFeature(tf.float32),
+    "steps/observation/head_camera_image": tf.io.VarLenFeature(tf.string),
     "steps/observation/low_cam_image": tf.io.VarLenFeature(tf.string),
-    
     "steps/language_instruction": tf.io.VarLenFeature(tf.string),
     "episode_metadata/file_path": tf.io.FixedLenFeature([], tf.string),
 }
@@ -59,8 +57,9 @@ for i, raw_record in enumerate(dataset):
     num_steps = len(ex["steps/is_first"])
 
     # ---- 按 features.json 定义的维度 reshape ----
-    action = ex["steps/action"].numpy().astype(np.float32).reshape(num_steps, 14)
-    state = ex["steps/observation/state"].numpy().astype(np.float32).reshape(num_steps, 14)
+    action = ex["steps/action"].numpy().astype(np.float32).reshape(num_steps, 7)
+    state = ex["steps/observation/state"].numpy().astype(np.float32).reshape(num_steps, 7)
+    # joint_state = ex["steps/observation/joint_state"].numpy().astype(np.float32).reshape(num_steps, 7)
 
     steps = []
     for t in range(num_steps):
@@ -72,13 +71,12 @@ for i, raw_record in enumerate(dataset):
             "reward": float(ex["steps/reward"][t]),
             "discount": float(ex["steps/discount"][t]),
             "state": state[t],             # ✅ (8,)
+            # "joint_state": joint_state[t], # ✅ (7,)
             "language_instruction": (
                 ex["steps/language_instruction"].numpy()[0].decode("utf-8")
                 if len(ex["steps/language_instruction"]) > 0 else ""
             ),
-            "image": ex["steps/observation/image"].numpy()[t] if len(ex["steps/observation/image"]) > t else b"",
-            "left_wrist_image": ex["steps/observation/left_wrist_image"].numpy()[t] if len(ex["steps/observation/left_wrist_image"]) > t else b"",
-            "right_wrist_image": ex["steps/observation/right_wrist_image"].numpy()[t] if len(ex["steps/observation/right_wrist_image"]) > t else b"",
+            "head_camera_image": ex["steps/observation/head_camera_image"].numpy()[t] if len(ex["steps/observation/head_camera_image"]) > t else b"",
             "low_cam_image": ex["steps/observation/low_cam_image"].numpy()[t] if len(ex["steps/observation/low_cam_image"]) > t else b"",
         }
         steps.append(step_data)
@@ -92,7 +90,7 @@ print(f"\n📊 文件中共 {len(trajectories)} 条轨迹")
 # ============================================
 # 5️⃣ 加载 latent 模型
 # ============================================
-lam_path = "/home/linyihan/linyh/latent-action/latent_action_model/checkpoints/lam-stage-2.ckpt"
+lam_path = "/home/linyihan/linyh/latent-action/latent_action_model/logs/task_centric_lam_stage2/last.ckpt"
 
 def load_lam() -> ControllableDINOLatentActionModel:
     model = ControllableDINOLatentActionModel(
@@ -120,11 +118,11 @@ for traj_idx, traj in enumerate(tqdm(trajectories, desc="Processing trajectories
     num_steps = len(traj)
 
     for t in range(num_steps):
-        img_bytes = traj[t]["image"]
+        img_bytes = traj[t]["head_camera_image"]
         if not img_bytes:
             continue
         t_next = min(t + 11, num_steps - 1)
-        img_next_bytes = traj[t_next]["image"]
+        img_next_bytes = traj[t_next]["head_camera_image"]
 
         img = Image.open(io.BytesIO(img_bytes)).convert("RGB").resize((224, 224), Image.BICUBIC)
         img_k = Image.open(io.BytesIO(img_next_bytes)).convert("RGB").resize((224, 224), Image.BICUBIC)
@@ -173,6 +171,7 @@ with tf.io.TFRecordWriter(output_path) as writer:
         num_steps = len(traj)
         actions = np.stack([s["action"] for s in traj], axis=0).astype(np.float32)  # (steps,7)
         states = np.stack([s["state"] for s in traj], axis=0).astype(np.float32)    # (steps,8)
+        # joints = np.stack([s["joint_state"] for s in traj], axis=0).astype(np.float32)  # (steps,7)
 
         latents = np.stack(all_latent_indices[traj_idx], axis=0).astype(np.float32)  # (steps,4)
         z = np.stack(all_latent_z[traj_idx], axis=0).astype(np.float32)              # (steps,4,128)
@@ -185,10 +184,9 @@ with tf.io.TFRecordWriter(output_path) as writer:
             "steps/discount": _float_feature([float(s["discount"]) for s in traj]),
             "steps/reward": _float_feature([float(s["reward"]) for s in traj]),
             "steps/observation/state": _float_feature(states.flatten().tolist()),
+            # "steps/observation/joint_state": _float_feature(joints.flatten().tolist()),
             "steps/language_instruction": _bytes_feature([s["language_instruction"].encode() for s in traj]),
-            "steps/observation/image": _bytes_feature([s["image"] for s in traj]),
-            "steps/observation/left_wrist_image": _bytes_feature([s["left_wrist_image"] for s in traj]),
-            "steps/observation/right_wrist_image": _bytes_feature([s["right_wrist_image"] for s in traj]),
+            "steps/observation/head_camera_image": _bytes_feature([s["head_camera_image"] for s in traj]),
             "steps/observation/low_cam_image": _bytes_feature([s["low_cam_image"] for s in traj]),
             "episode_metadata/file_path": _bytes_feature([traj[0]["language_instruction"].encode() if traj[0]["language_instruction"] else b""]),
             "steps/latent_idx": _float_feature(latents.flatten().tolist()),

@@ -7,7 +7,7 @@ from torch import Tensor
 from einops import rearrange, repeat
 from transformers import T5EncoderModel, T5Tokenizer
 
-from latent_action_model.genie.modules.blocks import patchify, unpatchify, SpatioTemporalTransformer, SpatioTransformer, VectorQuantizer, \
+from genie.modules.blocks import patchify, unpatchify, SpatioTemporalTransformer, SpatioTransformer, VectorQuantizer, \
                                                      MVSpatioTemporalTransformer, MVSpatioTransformer
 
 from .dinov2.hub.backbones import dinov2_vitb14_reg

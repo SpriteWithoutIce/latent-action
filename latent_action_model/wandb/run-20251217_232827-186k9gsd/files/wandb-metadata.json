@@ -1,0 +1,22 @@
+{
+  "os": "Linux-5.15.0-124-generic-x86_64-with-glibc2.31",
+  "python": "CPython 3.10.19",
+  "startedAt": "2025-12-17T15:28:27.437478Z",
+  "args": [
+    "fit",
+    "--config",
+    "config/lam-stage-2.yaml"
+  ],
+  "program": "/home/linyihan/linyh/latent-action/latent_action_model/main.py",
+  "codePath": "latent_action_model/main.py",
+  "codePathLocal": "main.py",
+  "git": {
+    "remote": "git@github.com:SpriteWithoutIce/latent-action.git",
+    "commit": "2b8228146d737df9f55a0319526eebb21cbc5bd1"
+  },
+  "email": "22373442@buaa.edu.cn",
+  "root": "/home/linyihan/linyh/latent-action/latent_action_model",
+  "host": "zkgy-gpu",
+  "executable": "/home/linyihan/miniconda3/envs/vlaos/bin/python3.10",
+  "writerId": "9dma6djjyu2pyfr2r2wyinj5fnfb34o8"
+}

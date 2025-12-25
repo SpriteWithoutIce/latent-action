@@ -22,22 +22,36 @@ model:
   make_data_pair: &make_data_pair false
   stage: stage-2
   stage_one_ckpt: ./logs/task_centric_lam_stage1/epoch=0-step=100000.ckpt
+  lam_path: /home/linyihan/linyh/latent-action/latent_action_model/checkpoints/lam-stage-2.ckpt
 
 data:
-  data_root: /path/to/your/rlds_data_collection
-  data_mix: omni_magic_soup_plus_plus   # Manip. + Navi. + Human                                  
-  batch_size: 64
-  resolution: 224
-  num_frames: 16  # TODO
-  episodic: false
-  shuffle_buffer_size: 45000            # works fine for 1,600 GB memories, plz adjust based on yout setup
+  data_root_dir: /home/linyihan/linyh/datasets/RoboTwin
+  data_mix:
+    - aloha_move_playingcard_away    
+    - aloha_place_container_plate
+    - aloha_move_can_pot
+    - aloha_pick_dual_bottles
+    - aloha_click_bell
+    - aloha_click_alarmclock
+    - aloha_dump_bin_bigbin
+    - aloha_grab_roller
+    - aloha_lift_pot
+    - aloha_move_pillbottle_pad
+    - aloha_open_laptop
+    - aloha_open_microwave
+    - aloha_place_a2b_left
+    - aloha_place_can_basket                   
+  per_device_batch_size: 128
+  resize_resolution: 224
+  shuffle_buffer_size: 100
   image_aug: true
+  goal_image_step: 32
 
 trainer:
-  max_epochs: 20
+  max_epochs: 10
   accelerator: gpu
   num_nodes: 1
-  devices: 8
+  devices: 2
   strategy: ddp_find_unused_parameters_false
   precision: 16-mixed
   log_every_n_steps: 1000
@@ -46,7 +60,7 @@ trainer:
   callbacks:
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
-        dirpath: ./logs/task_centric_lam_stage2
+        dirpath: ./logs/robotwin_lam_stage2
         verbose: true
         save_last: true
         save_top_k: -1
@@ -56,4 +70,4 @@ trainer:
     - class_path: lightning.pytorch.loggers.TensorBoardLogger
       init_args:
         save_dir: ./logs
-        name: task_centric_lam_stage2
+        name: robotwin_lam_stage2
