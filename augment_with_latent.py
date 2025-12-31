@@ -13,7 +13,7 @@ from latent_action_model.genie.modules import ControllableDINOLatentActionModel
 # 1. Load latent model
 ###############################################
 
-LAMBDA_CKPT = "/home/linyihan/linyh/latent-action/latent_action_model/checkpoints/lam-stage-2.ckpt"
+LAMBDA_CKPT = "/home/linyihan/linyh/latent-action/latent_action_model/logs/robotwin_lam_stage2/last-v1.ckpt"
 
 def load_lam():
     model = ControllableDINOLatentActionModel(
