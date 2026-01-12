@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import piq
 import torch
+import torch.nn as nn
 import swanlab
 from PIL import Image
 from einops import rearrange
@@ -39,6 +40,7 @@ class DINO_LAM(LightningModule):
             lam_num_heads: int = 8,
             lam_dropout: float = 0.0,
             vq_beta: float = 0.25,
+            action_beta: float = 1.0,
             log_interval: int = 1000,
             log_path: str = "log_imgs",
             task_name: str = 'lam_openx',
@@ -47,6 +49,8 @@ class DINO_LAM(LightningModule):
             make_data_pair: bool = False,
             stage_one_ckpt: str = None,
             lam_path: str = None,
+            goal_image_step: int = 32,
+            action_dim: int = 14,
     ) -> None:
         super(DINO_LAM, self).__init__()
         assert stage in ['stage-1', 'stage-2']
@@ -83,10 +87,19 @@ class DINO_LAM(LightningModule):
 
         self.lam_num_latents = lam_num_latents
         self.vq_beta = vq_beta
+        self.action_beta = action_beta
         self.log_interval = log_interval
         self.log_path = log_path
         self.optimizer = optimizer
         self.make_data_pair = make_data_pair
+
+        self.goal_image_step = goal_image_step
+        self.action_dim = action_dim
+        self.action_decoder = nn.Sequential(
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, goal_image_step * action_dim),
+        )
 
         self.save_hyperparameters()
 
@@ -106,8 +119,19 @@ class DINO_LAM(LightningModule):
         q_loss = ((outputs["emb"].detach() - outputs["z"]) ** 2).mean()
         commit_loss = ((outputs["emb"] - outputs["z"].detach()) ** 2).mean()
 
-        loss = mse_loss + q_loss + self.vq_beta * commit_loss
-        
+        # Compute action loss in stage-2
+        z = outputs["z_q"].squeeze(1)            # (B, 4, 128)
+        z_skill = z.mean(dim=1)       # (B, 128)
+        action_pred = self.action_decoder(z_skill)
+        gt_actions = batch["actions"]
+        B = gt_actions.shape[0]
+        action_pred = action_pred.view(B, self.goal_image_step, self.action_dim)
+        action_loss = ((action_pred - gt_actions) ** 2).mean(dim=(1, 2))
+        batch_mask = (torch.rand(B, device=gt_actions.device) < 0.1)  # (B,)
+        action_loss = (action_loss * batch_mask).sum() / (batch_mask.sum() + 1e-6)
+
+        loss = mse_loss + q_loss + self.vq_beta * commit_loss + self.action_beta * action_loss
+        # print(mse_loss, q_loss, commit_loss, action_loss)
         # Optimize uncontrollable queries in stage-2 (the codebook is frozen though)
         if "z_q_uncontrol" in outputs.keys():
             q_loss_uncontrol = ((outputs["emb_uncontrol"].detach() - outputs["z_uncontrol"]) ** 2).mean()
@@ -125,6 +149,7 @@ class DINO_LAM(LightningModule):
             ("q_loss", q_loss),
             ("commit_loss", commit_loss),
             ("code_usage", code_usage),
+            ("action_loss", action_loss),
         )
 
         if "indices_uncontrol" in outputs.keys():
@@ -141,6 +166,7 @@ class DINO_LAM(LightningModule):
                 ("commit_loss_uncontrol", commit_loss_uncontrol),
                 ("code_usage", code_usage),
                 ("code_usage_uncontrol", uncontrol_code_usage),
+                ("action_loss", action_loss),
             )
 
         return outputs, loss, loss_logs

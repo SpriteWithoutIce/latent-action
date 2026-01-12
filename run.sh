@@ -3,70 +3,45 @@
 # 自动处理所有分片 TFRecord 文件
 # ==========================================
 
-DATA_DIR=/home/linyihan/linyh/datasets/RoboTwin/move_playingcard_away/1.0.0
+#!/bin/bash
+
+BASE_DIR=/home/linyihan/linyh/datasets/RoboTwin
 export CUDA_VISIBLE_DEVICES=2
 
-for FILE in $DATA_DIR/move_playingcard_away-train.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
-done
+# 手动指定要处理的任务
+declare -A DATA_DIRS=(
+  # ["beat_block_hammer"]="beat_block_hammer"
+  # ["click_bell"]="click_bell"
+  # ["grab_roller"]="grab_roller"
+  # ["lift_pot"]="lift_pot"
+  ["move_can_pot"]="move_can_pot"
+  # ["move_playingcard_away"]="move_playingcard_away"
+)
 
-for FILE in $DATA_DIR/move_playingcard_away-val.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
-done
+for TASK in "${!DATA_DIRS[@]}"; do
+  DATA_DIR="$BASE_DIR/${DATA_DIRS[$TASK]}/1.0.0"
 
-DATA_DIR=/home/linyihan/linyh/datasets/RoboTwin/pick_dual_bottles/1.0.0
-export CUDA_VISIBLE_DEVICES=2
+  echo "==============================="
+  echo "📂 处理任务: $TASK"
+  echo "📁 数据目录: $DATA_DIR"
+  echo "==============================="
 
-for FILE in $DATA_DIR/pick_dual_bottles-train.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
-done
+  # echo "$DATA_DIR"/"$TASK"-train.tfrecord-*
+  # train
+  for FILE in "$DATA_DIR"/"$TASK"-train.tfrecord-*; do
+    [ -e "$FILE" ] || continue
+    echo "🚀 开始处理 (train): $FILE"
+    python augment_with_latent.py "$FILE"
+    echo "✅ 完成: $FILE"
+    echo "-----------------------------"
+  done
 
-for FILE in $DATA_DIR/pick_dual_bottles-val.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
-done
-
-DATA_DIR=/home/linyihan/linyh/datasets/RoboTwin/place_container_plate/1.0.0
-export CUDA_VISIBLE_DEVICES=2
-
-for FILE in $DATA_DIR/place_container_plate-train.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
-done
-
-for FILE in $DATA_DIR/place_container_plate-val.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
-done
-
-DATA_DIR=/home/linyihan/linyh/datasets/RoboTwin/move_can_pot/1.0.0
-export CUDA_VISIBLE_DEVICES=2
-
-for FILE in $DATA_DIR/move_can_pot-train.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
-done
-
-for FILE in $DATA_DIR/move_can_pot-val.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
+  # val
+  for FILE in "$DATA_DIR"/"$TASK"-val.tfrecord-*; do
+    [ -e "$FILE" ] || continue
+    echo "🚀 开始处理 (val): $FILE"
+    python augment_with_latent.py "$FILE"
+    echo "✅ 完成: $FILE"
+    echo "-----------------------------"
+  done
 done

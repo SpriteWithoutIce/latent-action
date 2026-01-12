@@ -3,83 +3,44 @@
 # 自动处理所有分片 TFRecord 文件
 # ==========================================
 
-DATA_DIR=/home/linyihan/linyh/datasets/RoboTwin/click_bell/1.0.0
+#!/bin/bash
+
+BASE_DIR=/home/linyihan/linyh/datasets/RoboTwin
 export CUDA_VISIBLE_DEVICES=3
 
-for FILE in $DATA_DIR/click_bell-train.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
-done
+# 手动指定要处理的任务
+declare -A DATA_DIRS=(
+  ["move_playingcard_away"]="move_playingcard_away"
+  ["pick_dual_bottles"]="pick_dual_bottles"
+  ["pick_diverse_bottles"]="pick_diverse_bottles"
+  ["place_container_plate"]="place_container_plate"
+  ["place_a2b_left"]="place_a2b_left"
+)
 
-for FILE in $DATA_DIR/click_bell-val.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
-done
+for TASK in "${!DATA_DIRS[@]}"; do
+  DATA_DIR="$BASE_DIR/${DATA_DIRS[$TASK]}/1.0.0"
 
-DATA_DIR=/home/linyihan/linyh/datasets/RoboTwin/dump_bin_bigbin/1.0.0
+  echo "==============================="
+  echo "📂 处理任务: $TASK"
+  echo "📁 数据目录: $DATA_DIR"
+  echo "==============================="
 
-for FILE in $DATA_DIR/dump_bin_bigbin-train.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
-done
+  # echo "$DATA_DIR"/"$TASK"-train.tfrecord-*
+  # train
+  for FILE in "$DATA_DIR"/"$TASK"-train.tfrecord-*; do
+    [ -e "$FILE" ] || continue
+    echo "🚀 开始处理 (train): $FILE"
+    python augment_with_latent.py "$FILE"
+    echo "✅ 完成: $FILE"
+    echo "-----------------------------"
+  done
 
-for FILE in $DATA_DIR/dump_bin_bigbin-val.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
-done
-
-DATA_DIR=/home/linyihan/linyh/datasets/RoboTwin/grab_roller/1.0.0
-
-for FILE in $DATA_DIR/grab_roller-train.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
-done
-
-for FILE in $DATA_DIR/grab_roller-val.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
-done
-
-DATA_DIR=/home/linyihan/linyh/datasets/RoboTwin/open_laptop/1.0.0
-
-for FILE in $DATA_DIR/open_laptop-train.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
-done
-
-for FILE in $DATA_DIR/open_laptop-val.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
-done
-
-DATA_DIR=/home/linyihan/linyh/datasets/RoboTwin/open_laptop/1.0.0
-
-for FILE in $DATA_DIR/open_laptop-train.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
-done
-
-for FILE in $DATA_DIR/open_laptop-val.tfrecord-*; do
-  echo "🚀 开始处理: $FILE"
-  python augment_with_latent.py "$FILE"
-  echo "✅ 完成: $FILE"
-  echo "-----------------------------"
+  # val
+  for FILE in "$DATA_DIR"/"$TASK"-val.tfrecord-*; do
+    [ -e "$FILE" ] || continue
+    echo "🚀 开始处理 (val): $FILE"
+    python augment_with_latent.py "$FILE"
+    echo "✅ 完成: $FILE"
+    echo "-----------------------------"
+  done
 done

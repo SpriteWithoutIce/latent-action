@@ -10,6 +10,7 @@ model:
   lam_num_heads: 12
 
   vq_beta: 0.25
+  action_beta: 0.5
   log_interval: 5000
   log_path: ./logs
   optimizer:
@@ -23,24 +24,22 @@ model:
   stage: stage-2
   stage_one_ckpt: ./logs/task_centric_lam_stage1/epoch=0-step=100000.ckpt
   lam_path: /home/linyihan/linyh/latent-action/latent_action_model/checkpoints/lam-stage-2.ckpt
-
+  goal_image_step: 32
+  action_dim: 14
+  
 data:
   data_root_dir: /home/linyihan/linyh/datasets/RoboTwin
   data_mix:
-    - aloha_move_playingcard_away    
-    - aloha_place_container_plate
-    - aloha_move_can_pot
-    - aloha_pick_dual_bottles
+    - aloha_beat_block_hammer    
     - aloha_click_bell
-    - aloha_click_alarmclock
-    - aloha_dump_bin_bigbin
     - aloha_grab_roller
     - aloha_lift_pot
-    - aloha_move_pillbottle_pad
-    - aloha_open_laptop
-    - aloha_open_microwave
-    - aloha_place_a2b_left
-    - aloha_place_can_basket                   
+    - aloha_move_can_pot
+    - aloha_move_playingcard_away
+    - aloha_pick_dual_bottles
+    - aloha_pick_diverse_bottles
+    - aloha_place_container_plate
+    - aloha_place_a2b_left                 
   per_device_batch_size: 128
   resize_resolution: 224
   shuffle_buffer_size: 100
@@ -48,7 +47,7 @@ data:
   goal_image_step: 32
 
 trainer:
-  max_epochs: 10
+  max_epochs: 20
   accelerator: gpu
   num_nodes: 1
   devices: 2
@@ -60,7 +59,7 @@ trainer:
   callbacks:
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
-        dirpath: ./logs/robotwin_lam_stage2
+        dirpath: ./logs/robotwin_0108_lam_stage2
         verbose: true
         save_last: true
         save_top_k: -1
@@ -70,4 +69,4 @@ trainer:
     - class_path: lightning.pytorch.loggers.TensorBoardLogger
       init_args:
         save_dir: ./logs
-        name: robotwin_lam_stage2
+        name: robotwin_0108_lam_stage2

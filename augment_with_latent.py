@@ -8,12 +8,69 @@ from torchvision import transforms
 
 from latent_action_model.genie.modules import ControllableDINOLatentActionModel
 
+import json
+import shutil
+from collections import OrderedDict
+LATENT_IDX_FEATURE = {
+    "pythonClassName": "tensorflow_datasets.core.features.tensor_feature.Tensor",
+    "tensor": {
+        "shape": {
+            "dimensions": ["4"]
+        },
+        "dtype": "float32",
+        "encoding": "none"
+    },
+    "description": "Latent action indices from tokenizer."
+}
+
+LATENT_Z_FEATURE = {
+    "pythonClassName": "tensorflow_datasets.core.features.tensor_feature.Tensor",
+    "tensor": {
+        "shape": {
+            "dimensions": ["4", "128"]
+        },
+        "dtype": "float32",
+        "encoding": "none"
+    },
+    "description": "Continuous latent action embedding."
+}
+def copy_and_patch_feature_json(src_feature_json, dst_feature_json):
+    with open(src_feature_json, "r") as f:
+        data = json.load(f, object_pairs_hook=OrderedDict)
+
+    steps_features = (
+        data["featuresDict"]["features"]
+            ["steps"]["sequence"]["feature"]
+            ["featuresDict"]["features"]
+    )
+
+    # 已经加过就直接写出（支持断点重跑）
+    if "latent_idx" in steps_features:
+        with open(dst_feature_json, "w") as f:
+            json.dump(data, f, indent=2)
+        return
+
+    new_steps = OrderedDict()
+    for k, v in steps_features.items():
+        new_steps[k] = v
+        if k == "reward":
+            new_steps["latent_idx"] = LATENT_IDX_FEATURE
+            new_steps["latent_z"] = LATENT_Z_FEATURE
+
+    (
+        data["featuresDict"]["features"]
+            ["steps"]["sequence"]["feature"]
+            ["featuresDict"]["features"]
+    ) = new_steps
+
+    with open(dst_feature_json, "w") as f:
+        json.dump(data, f, indent=2)
 
 ###############################################
 # 1. Load latent model
 ###############################################
 
-LAMBDA_CKPT = "/home/linyihan/linyh/latent-action/latent_action_model/logs/robotwin_lam_stage2/last-v1.ckpt"
+LAMBDA_CKPT = "/home/linyihan/linyh/latent-action/latent_action_model/logs/robotwin_0108_lam_stage2/last.ckpt"
 
 def load_lam():
     model = ControllableDINOLatentActionModel(
@@ -24,7 +81,23 @@ def load_lam():
     )
     ckpt = torch.load(LAMBDA_CKPT, map_location="cpu")["state_dict"]
     ckpt = {k.replace("lam.", ""): v for k, v in ckpt.items()}
-    model.load_state_dict(ckpt)
+    missing_keys, unexpected_keys = model.load_state_dict(
+        ckpt,
+        strict=False
+    )
+
+    if len(missing_keys) > 0:
+        raise RuntimeError(
+            f"❌ Missing keys when loading checkpoint:\n" +
+            "\n".join(missing_keys)
+        )
+
+    if len(unexpected_keys) > 0:
+        print(
+            f"⚠️ Ignored unexpected keys ({len(unexpected_keys)}):\n" +
+            "\n".join(unexpected_keys)
+        )
+
     return model.eval()
 
 lam = load_lam().to("cuda:0")
@@ -246,11 +319,39 @@ if not files:
 output_dir = os.path.join(os.path.dirname(files[0]), "output")
 os.makedirs(output_dir, exist_ok=True)
 
+BASE_OUTPUT_DIR = "/home/linyihan/linyh/datasets/robotwin_latent_0108"
 
 for i, fpath in enumerate(files):
     print(f"\n===== Processing {i+1}/{len(files)}: {fpath} =====")
 
     dataset = tf.data.TFRecordDataset(fpath)
+    # out_path = os.path.join(output_dir, os.path.basename(fpath))
+    # writer = tf.io.TFRecordWriter(out_path)
+    
+    parts = fpath.split(os.sep)
+
+    # 取任务名和版本号
+    task_name = parts[-3]     # 2_bowls
+    version   = parts[-2]     # 1.0.0
+
+    output_dir = os.path.join(BASE_OUTPUT_DIR, task_name, version)
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # ===== 复制 dataset_info.json =====
+    src_root = os.path.dirname(fpath)
+    src_dataset_info = os.path.join(src_root, "dataset_info.json")
+    dst_dataset_info = os.path.join(output_dir, "dataset_info.json")
+
+    if os.path.exists(src_dataset_info) and not os.path.exists(dst_dataset_info):
+        shutil.copy2(src_dataset_info, dst_dataset_info)
+
+    # ===== 复制 + patch feature.json =====
+    src_feature_json = os.path.join(src_root, "features.json")
+    dst_feature_json = os.path.join(output_dir, "features.json")
+
+    if os.path.exists(src_feature_json):
+        copy_and_patch_feature_json(src_feature_json, dst_feature_json)
+
     out_path = os.path.join(output_dir, os.path.basename(fpath))
     writer = tf.io.TFRecordWriter(out_path)
 

@@ -980,6 +980,62 @@ OXE_DATASET_CONFIGS = {
         "action_encoding": ActionEncoding.BIMANUAL_EEF_POSE,
     },
     # Add more datasets here as needed
+    "2_bowls": {
+        "image_obs_keys": {
+            "primary": "head_camera_image",
+            "wrist": "low_cam_image",
+        },
+        "depth_obs_keys": {
+            "primary": None,
+            "secondary": None,
+            "wrist": None,
+        },
+        "state_obs_keys": ["state"],  
+        "state_encoding": StateEncoding.POS_EULER,  
+        "action_encoding": ActionEncoding.EEF_POS,  
+    },
+    "3_bowls": {
+        "image_obs_keys": {
+            "primary": "head_camera_image",
+            "wrist": "low_cam_image",
+        },
+        "depth_obs_keys": {
+            "primary": None,
+            "secondary": None,
+            "wrist": None,
+        },
+        "state_obs_keys": ["state"],  
+        "state_encoding": StateEncoding.POS_EULER,  
+        "action_encoding": ActionEncoding.EEF_POS,  
+    },
+    "4_bowls": {
+        "image_obs_keys": {
+            "primary": "head_camera_image",
+            "wrist": "low_cam_image",
+        },
+        "depth_obs_keys": {
+            "primary": None,
+            "secondary": None,
+            "wrist": None,
+        },
+        "state_obs_keys": ["state"],  
+        "state_encoding": StateEncoding.POS_EULER,  
+        "action_encoding": ActionEncoding.EEF_POS,  
+    },
+    "wipe": {
+        "image_obs_keys": {
+            "primary": "head_camera_image",
+            "wrist": "low_cam_image",
+        },
+        "depth_obs_keys": {
+            "primary": None,
+            "secondary": None,
+            "wrist": None,
+        },
+        "state_obs_keys": ["state"],  
+        "state_encoding": StateEncoding.POS_EULER,  
+        "action_encoding": ActionEncoding.EEF_POS,  
+    },
 }
 ALOHA_DATASET_TEMPLATE = {
     "image_obs_keys": {

@@ -1045,6 +1045,11 @@ OXE_STANDARDIZATION_TRANSFORMS = {
     "bimanual_lift_ball": peract2_dataset_transform,
     "bimanual_straighten_rope": peract2_dataset_transform,
     "bimanual_sweep_to_dustpan": peract2_dataset_transform,
+    # jaka
+    "2_bowls": aloha_dataset_transform,
+    "3_bowls": aloha_dataset_transform,
+    "4_bowls": aloha_dataset_transform,
+    "wipe": aloha_dataset_transform,
 }
 from pathlib import Path
 

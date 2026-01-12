@@ -186,7 +186,8 @@ class RLDSBatchTransformLAM:
 
         video = torch.stack([self.image_transform(start), self.image_transform(goal)], dim=0)
         # instruction = rlds_batch["task"]["language_instruction"].decode().lower()
-        
+        actions = rlds_batch["action"]
+
         instr = rlds_batch["task"]["language_instruction"]
         if isinstance(instr, (np.ndarray, list, tuple)):
             instr = random.choice(instr)
@@ -199,6 +200,7 @@ class RLDSBatchTransformLAM:
             "videos": video,
             "task_instruction": instr,
             "dataset_name": rlds_batch["dataset_name"],
+            "actions": actions,
         }
 
 
@@ -209,11 +211,14 @@ class CollatorForLAM:
         videos = torch.stack([instance["videos"] for instance in instances])
         dataset_names = [instance["dataset_name"] for instance in instances]
         instructions = [instance["task_instruction"] for instance in instances]
+        actions = [torch.from_numpy(np.copy(instance["actions"])) for instance in instances]
+        actions = torch.stack(actions)
 
         return {
             "videos": videos,
             "dataset_names": dataset_names,
             "task_instruction": instructions,
+            "actions": actions,
         }
 import random
 import numpy as np
@@ -308,7 +313,7 @@ class LightningLAMDataModule(pl.LightningDataModule):
                 shuffle_buffer_size=self.shuffle_buffer_size,
                 train=True,
                 image_aug=self.image_aug,
-                window_size=1,
+                window_size=self.goal_image_step,
                 goal_image_step=self.goal_image_step,
             )
 
@@ -321,7 +326,7 @@ class LightningLAMDataModule(pl.LightningDataModule):
                 shuffle_buffer_size=self.shuffle_buffer_size,
                 train=False,
                 image_aug=False,
-                window_size=1,
+                window_size=self.goal_image_step,
                 goal_image_step=self.goal_image_step,
             )
 
@@ -334,7 +339,7 @@ class LightningLAMDataModule(pl.LightningDataModule):
                 shuffle_buffer_size=self.shuffle_buffer_size,
                 train=True,
                 image_aug=False,
-                window_size=1,
+                window_size=self.goal_image_step,
                 goal_image_step=self.goal_image_step,
             )
 

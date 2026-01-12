@@ -90,7 +90,7 @@ print(f"\n📊 文件中共 {len(trajectories)} 条轨迹")
 # ============================================
 # 5️⃣ 加载 latent 模型
 # ============================================
-lam_path = "/home/linyihan/linyh/latent-action/latent_action_model/logs/task_centric_lam_stage2/last.ckpt"
+lam_path = "/home/linyihan/linyh/latent-action/latent_action_model/logs/jaka_lam_stage2/last.ckpt"
 
 def load_lam() -> ControllableDINOLatentActionModel:
     model = ControllableDINOLatentActionModel(

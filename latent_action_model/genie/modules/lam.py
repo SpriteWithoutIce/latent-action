@@ -295,9 +295,11 @@ class ControllableDINOLatentActionModel(nn.Module):
         B, T = batch["videos"].shape[:2]
         H, W = batch["videos"].shape[3:5]
 
+        # print(batch["actions"].shape)
+
         outputs = self.vq_encode(batch["videos"]) 
         video_patches = self.patch_up(outputs["patches"][:, :-1])
-
+        # print(outputs["z_q"].shape)
         # Decode
         video_action_patches = torch.cat([self.action_up(outputs["z_q"]), 
                                           self.action_up_uncontrol(outputs["z_q_uncontrol"]), 

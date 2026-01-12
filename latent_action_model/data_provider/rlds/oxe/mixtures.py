@@ -261,6 +261,14 @@ OXE_NAMED_MIXTURES: Dict[str, List[Tuple[str, float]]] = {
         ("bimanual_straighten_rope", 1.0),
         ("bimanual_sweep_to_dustpan", 1.0),
     ],
+
+    # === JAKA Datasets ===
+    "jaka": [
+        ("2_bowls", 1.0),
+        ("3_bowls", 1.0),
+        ("4_bowls", 1.0),
+        ("wipe", 1.0),
+    ],
 }
 # fmt: on
 from pathlib import Path
