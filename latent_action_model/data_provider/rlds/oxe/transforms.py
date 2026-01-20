@@ -1050,6 +1050,7 @@ OXE_STANDARDIZATION_TRANSFORMS = {
     "3_bowls": aloha_dataset_transform,
     "4_bowls": aloha_dataset_transform,
     "wipe": aloha_dataset_transform,
+    "xarm_tabletop": aloha_dataset_transform,
 }
 from pathlib import Path
 

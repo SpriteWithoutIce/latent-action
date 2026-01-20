@@ -25,21 +25,21 @@ model:
   stage_one_ckpt: ./logs/task_centric_lam_stage1/epoch=0-step=100000.ckpt
   lam_path: /home/linyihan/linyh/latent-action/latent_action_model/checkpoints/lam-stage-2.ckpt
   goal_image_step: 32
-  action_dim: 14
+  action_dim: 7
   
 data:
-  data_root_dir: /home/linyihan/linyh/datasets/RoboTwin
+  data_root_dir: /home/linyihan/linyh/datasets/xarm_tfds_out
   data_mix:
-    - aloha_beat_block_hammer    
-    - aloha_click_bell
-    - aloha_grab_roller
-    - aloha_lift_pot
-    - aloha_move_can_pot
-    - aloha_move_playingcard_away
-    - aloha_pick_dual_bottles
-    - aloha_pick_diverse_bottles
-    - aloha_place_container_plate
-    - aloha_place_a2b_left                 
+    - xarm_tabletop    
+    # - aloha_click_bell
+    # - aloha_grab_roller
+    # - aloha_lift_pot
+    # - aloha_move_can_pot
+    # - aloha_move_playingcard_away
+    # - aloha_pick_dual_bottles
+    # - aloha_pick_diverse_bottles
+    # - aloha_place_container_plate
+    # - aloha_place_a2b_left                 
   per_device_batch_size: 128
   resize_resolution: 224
   shuffle_buffer_size: 100
@@ -47,7 +47,7 @@ data:
   goal_image_step: 32
 
 trainer:
-  max_epochs: 20
+  max_epochs: 5
   accelerator: gpu
   num_nodes: 1
   devices: 2
@@ -59,7 +59,7 @@ trainer:
   callbacks:
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
-        dirpath: ./logs/robotwin_0108_lam_stage2
+        dirpath: ./logs/xarm_0116
         verbose: true
         save_last: true
         save_top_k: -1
@@ -69,4 +69,4 @@ trainer:
     - class_path: lightning.pytorch.loggers.TensorBoardLogger
       init_args:
         save_dir: ./logs
-        name: robotwin_0108_lam_stage2
+        name: xarm_0116

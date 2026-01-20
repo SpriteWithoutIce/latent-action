@@ -269,6 +269,9 @@ OXE_NAMED_MIXTURES: Dict[str, List[Tuple[str, float]]] = {
         ("4_bowls", 1.0),
         ("wipe", 1.0),
     ],
+    "xarm_tabletop": [
+        ("xarm_tabletop",1.0),
+    ]
 }
 # fmt: on
 from pathlib import Path
